@@ -1,0 +1,143 @@
+[gd_scene load_steps=8 format=3 uid="uid://utfdaa8j8hpy"]
+
+[ext_resource type="Script" path="res://scripts/Scenes/BrowseLobbyScene.cs" id="1_ujt8j"]
+[ext_resource type="Theme" uid="uid://cybuh7e6joost" path="res://themes/buttons.tres" id="2_cujwr"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_uqqe1"]
+font_size = 40
+font_color = Color(1, 1, 0, 1)
+outline_size = 5
+outline_color = Color(0.760784, 0.270588, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_jww0f"]
+font_size = 35
+
+[sub_resource type="Theme" id="Theme_3lx84"]
+OptionButton/font_sizes/font_size = 30
+PopupMenu/font_sizes/font_size = 30
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n1uvd"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xlovo"]
+
+[node name="Root" type="Node"]
+script = ExtResource("1_ujt8j")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="SceneTitle" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Browse Steam Lobby"
+label_settings = SubResource("LabelSettings_uqqe1")
+
+[node name="SearchOptionsContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="RegionDistanceLabel" type="Label" parent="MarginContainer/VBoxContainer/SearchOptionsContainer"]
+layout_mode = 2
+text = "Region distance"
+label_settings = SubResource("LabelSettings_jww0f")
+
+[node name="RegionDistanceOptionButton" type="OptionButton" parent="MarginContainer/VBoxContainer/SearchOptionsContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = SubResource("Theme_3lx84")
+selected = 1
+item_count = 4
+popup/item_0/text = "Close"
+popup/item_1/text = "Default"
+popup/item_1/id = 1
+popup/item_2/text = "Far"
+popup/item_2/id = 2
+popup/item_3/text = "Worldwide"
+popup/item_3/id = 3
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/VBoxContainer/SearchOptionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_n1uvd")
+
+[node name="RefreshLobbyButton" type="Button" parent="MarginContainer/VBoxContainer/SearchOptionsContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("2_cujwr")
+theme_override_font_sizes/font_size = 30
+text = "Refresh"
+
+[node name="LobbyItemPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_xlovo")
+
+[node name="LobbyItemScroll" type="ScrollContainer" parent="MarginContainer/VBoxContainer/LobbyItemPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LobbyItemList" type="ItemList" parent="MarginContainer/VBoxContainer/LobbyItemPanel/LobbyItemScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 35
+
+[node name="RefreshLobbyProgressBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/LobbyItemPanel"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(200, 30)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+indeterminate = true
+editor_preview_indeterminate = false
+
+[node name="ConfirmButtonContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/ConfirmButtonContainer"]
+layout_mode = 2
+theme = ExtResource("2_cujwr")
+theme_override_font_sizes/font_size = 35
+text = "Back"
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/VBoxContainer/ConfirmButtonContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_n1uvd")
+
+[node name="EnterAsPlayerButton" type="Button" parent="MarginContainer/VBoxContainer/ConfirmButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("2_cujwr")
+theme_override_font_sizes/font_size = 35
+disabled = true
+text = "Enter as Player"
+
+[node name="EnterAsSpectatorButton" type="Button" parent="MarginContainer/VBoxContainer/ConfirmButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("2_cujwr")
+theme_override_font_sizes/font_size = 35
+disabled = true
+text = "Enter as Spectator"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/SearchOptionsContainer/RefreshLobbyButton" to="." method="_OnRefreshButtonPressed"]
+[connection signal="item_selected" from="MarginContainer/VBoxContainer/LobbyItemPanel/LobbyItemScroll/LobbyItemList" to="." method="_OnLobbyItemSelected"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/ConfirmButtonContainer/BackButton" to="." method="_OnBackButtonPressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/ConfirmButtonContainer/EnterAsPlayerButton" to="." method="_OnEnterAsPlayerButtonPressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/ConfirmButtonContainer/EnterAsSpectatorButton" to="." method="_OnEnterAsSpectatorButtonPressed"]

@@ -1,13 +1,13 @@
 namespace SpaceWar.Models;
 
-using System.Net;
+using GnsSharp;
 
 public sealed class Peer
 {
-    public required Guid PeerId { get; init; }
-    public required string Username { get; init; }
-    public required IPEndPoint Endpoint { get; init; }
-    public IPEndPoint LocalEndpoint { get; init; }
-    public bool Connected { get; init; }
-    public bool Ready { get; init; }
+    public required CSteamID PeerId { get; init; }
+    public required string Username { get; set; }
+    public PlayerMode Mode { get; set; }
+    public bool Ready { get; set; }
+
+    public bool IsUsernameInvalid => Username == string.Empty || Username == "[unknown]";
 }

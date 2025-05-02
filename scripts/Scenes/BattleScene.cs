@@ -1,5 +1,6 @@
 using Backdash;
 using Backdash.Core;
+using Backdash.Gns;
 using SpaceWar.Logic;
 using SpaceWar.Models;
 using SpaceWar.Services;
@@ -60,6 +61,7 @@ public partial class BattleScene : Node2D
         var builder =
             RollbackNetcode
                 .WithInputType<GameInputs>()
+                .UseGameNetworkingSockets()
                 .WithPort(config.LocalPort)
                 .WithInputDelayFrames(2)
                 .WithLogLevel(LogLevel.Warning)

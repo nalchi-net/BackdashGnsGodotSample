@@ -1,32 +1,46 @@
 # SpaceWar with Godot
 
-This project is a usage sample of [rollback netcode](https://lucasteles.github.io/Backdash/docs/introduction.html#how-does-it-work) using [Backdash](https://github.com/lucasteles/Backdash) in [Godot](https://godotengine.org/).
+This project is a usage sample of [rollback netcode](https://lucasteles.github.io/Backdash/docs/introduction.html#how-does-it-work) using [Backdash.Gns](https://github.com/nalchi-net/Backdash.Gns) in [Godot](https://godotengine.org/).
 
-It shows a basic example of an online lobby for NAT traversal using [UDP hole punching](https://en.wikipedia.org/wiki/UDP_hole_punching).
+It shows a basic example of an online lobby using [Steam P2P Matchmaking & Lobbies](https://partner.steamgames.com/doc/features/multiplayer/matchmaking).
 
 ## Video
-[![Godot Online](https://img.youtube.com/vi/8M8QnTiJZzA/default.jpg)](https://youtu.be/8M8QnTiJZzA)
+
+https://github.com/user-attachments/assets/a43b664b-64b6-44f4-be31-6699365dae39
 
 # How does it work?
 
-This enables a P2P connection over the internet, this is possible using
-a [middle server](https://github.com/lucasteles/Backdash/tree/master/samples/LobbyServer)
-which all clients know.
-The server catches the IP address and port of a client and sends it to the others.
+This creates and/or joins a Steam Lobby via [`ISteamMatchmaking`](https://partner.steamgames.com/doc/api/ISteamMatchmaking) interface.
 
-The current server runs almost as a simple HTTP with JSON responses. It keeps the lobby info with sliding expiration
-cache.
+When the host creates a Steam lobby, it sets some metadata about the lobby with [`ISteamMatchmaking.SetLobbyData()`](https://partner.steamgames.com/doc/api/ISteamMatchmaking#SetLobbyData).
+- Key: `"GameTitle"`
+  - Value: `"BackdashGnsGodotSample"`
+    - This exists to filter out other game lobbies that uses the same test AppId 480
+- Key: `"LobbyName"`
+  - The name of the lobby
+This metadata is used in the browse lobby scene.
 
-When a client enters the lobby the server responds with a token of type `Guid`/`UUID`. It is used a very
-basic `Authentication` mechanism.
+When a client enters the lobby, it sets some metadata about itself with [`ISteamMatchmaking.SetLobbyMemberData()`](https://partner.steamgames.com/doc/api/ISteamMatchmaking#SetLobbyMemberData):
+- Key: `"Spectator"`
+  - Value: `"1"` - it's a spectator
+  - Value: `"0"` - it's a player
+- Key: `"Ready"`
+  - Value: `"1"` - it's ready
+  - Value: `"0"` - it's not ready
 
-The client uses HTTP pooling to get updated information on each lobby member/peer.
+To start the game, the lobby owner sends a message with [`ISteamMatchmaking.SendLobbyChatMsg()`](https://partner.steamgames.com/doc/api/ISteamMatchmaking#SendLobbyChatMsg) when every player is ready.\
+This message consists of the players and spectators list:
+- Magic string "BG" (2 bytes)
+- Message kind (1 byte)
+  - This is always `0`, as we don't have any kind of message other than this "start game"
+- Number of players (1 byte)
+  - For each player:
+    - Player's Steam ID (8 bytes)
+- Number of spectators (1 byte)
+  - For each spectator:
+    - Spectator's Steam ID (8 bytes)
 
-When logged in, every client needs to send a `UDP` package with their token to the server. The server uses the package header metadata  
-to keep track of their `IP` and open `Port`.
-
-> ⚠️ UDP Hole punching usually **does not** work with clients behind the same NAT. To mitigate this the server
-> also tracks the local IP and port on each client to check if the peer is on the same network.
+This protocol is very rudimentary, but it does the job for this simple demo.
 
 ## Controls
 
@@ -36,20 +50,8 @@ to keep track of their `IP` and open `Port`.
 
 ## Running
 
-### Server
+### Client
 
-> [!NOTE]
-> This project uses an already published [demo lobby server](https://lobby-server.fly.dev/swagger/index.html).
+You must be running the Steam client to run this sample.
 
-The server URL is configured in the `settings.ini` file and you can start your own [server from here](https://github.com/lucasteles/Backdash/tree/master/samples/LobbyServer):
-
-After cloning the repository run this command on the server project directory:
-```bash
-dotnet run .
-```
-
-- Default **HTTP**: `9999`
-- Default **UDP** : `8888`
-
-> [!TIP]
-> 💡 Check the swagger `API` docs at http://localhost:9999/swagger
+On some platforms, you might need to create a `steam_appid.txt` that has only `480` written in it, in the executable's directory.

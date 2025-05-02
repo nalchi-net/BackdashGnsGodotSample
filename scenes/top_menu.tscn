@@ -1,0 +1,41 @@
+[gd_scene load_steps=3 format=3 uid="uid://ct1hh4hg65nua"]
+
+[ext_resource type="Script" path="res://scripts/Scenes/TopMenuScene.cs" id="1_jj30n"]
+[ext_resource type="Theme" uid="uid://cybuh7e6joost" path="res://themes/buttons.tres" id="2_0vnrl"]
+
+[node name="Root" type="Node"]
+script = ExtResource("1_jj30n")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="CreateLobbyButton" type="Button" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_0vnrl")
+theme_override_font_sizes/font_size = 50
+text = "Create
+Steam Lobby"
+
+[node name="BrowseLobbyButton" type="Button" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_0vnrl")
+theme_override_font_sizes/font_size = 50
+text = "Browse
+Steam Lobby"
+
+[connection signal="pressed" from="MarginContainer/HBoxContainer/CreateLobbyButton" to="." method="_OnCreateLobbyButtonPressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/BrowseLobbyButton" to="." method="_OnBrowseLobbyButtonPressed"]

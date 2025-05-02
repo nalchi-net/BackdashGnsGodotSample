@@ -1,9 +1,9 @@
-using Backdash;
+using GnsSharp;
 using SpaceWar;
 using SpaceWar.Models;
 using SpaceWar.Services;
 
-public partial class LobbyScene : Node
+public partial class LobbyScene : Node, ISteamLobbyServiceHandlers
 {
     GlobalConfig config;
     Label lblStatus;
@@ -11,65 +11,59 @@ public partial class LobbyScene : Node
     Label lblLobbyName;
     ItemList lstPlayers;
     ItemList lstSpectators;
-    LobbyHttpClient httpClient;
-    LobbyUdpClient udpClient;
-    readonly CancellationTokenSource cts = new();
 
+    SteamLobbyService lobby;
     Lobby lobbyInfo;
-    User user;
+
     bool readyToStart;
     bool connected;
+    bool disposed;
 
     static readonly Texture2D blankTexture = GD.Load<Texture2D>("res://textures/blank.tres");
 
     public override async void _Ready()
     {
         config = GlobalConfig.Instance;
+
+        lobby = new(this);
+        lobbyInfo = new() { Name = config.LobbyName };
+
         LoadControls();
         ResetControls();
         UpdateTitle();
         FillHelperLabels();
         UpdateStatus();
 
-        httpClient = new(config.LocalPort, config.ServerUrl);
-        udpClient = new(config.LocalPort, config.ServerUrl, config.ServerUdpPort);
-
-        await RequestLobby();
+        await JoinLobby();
     }
 
+    public override void _ExitTree() => Dispose();
+
     void UpdateTitle() =>
-        DisplayServer.WindowSetTitle($"Space War {config.LocalPort}: {config.Username}@{config.LobbyName}");
+        DisplayServer.WindowSetTitle($"Space War: {config.Username}@{config.LobbyName}");
 
     protected override void Dispose(bool disposing)
     {
-        if (!cts.IsCancellationRequested)
-            cts.Cancel();
+        if (!disposed)
+        {
+            disposed = true;
 
-        cts.Dispose();
-        udpClient.Dispose();
+            lobby.Dispose();
+
+            config.LobbySteamId = CSteamID.Nil;
+        }
+
         base.Dispose(disposing);
     }
 
-    public override void _Process(double delta)
-    {
-        if (user is null)
-            return;
-
-        CheckPlayersReady();
-    }
-
-    public override async void _Input(InputEvent input)
+    public override void _Input(InputEvent input)
     {
         if (input.IsActionPressed(ActionNames.Cancel))
-            GetTree().Quit();
+            GetTree().ChangeSceneToFile("res://scenes/top_menu.tscn");
 
         if (input.IsActionPressed(ActionNames.Start))
-            await ToggleReady();
+            ToggleReady();
     }
-
-    async void _OnRefreshLobby() => await RefreshLobby();
-
-    async void _OnPingTimer() => await PingUdp();
 
     void LoadControls()
     {
@@ -93,10 +87,7 @@ public partial class LobbyScene : Node
 
     static Color MemberStatusColor(MemberStatus status) => status switch
     {
-        MemberStatus.None => Colors.White,
-        MemberStatus.Connecting => Colors.Red,
-        MemberStatus.Connected => Colors.Orange,
-        MemberStatus.Reachable => Colors.SkyBlue,
+        MemberStatus.Joined => Colors.SkyBlue,
         MemberStatus.Ready => Colors.Lime,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
     };
@@ -110,7 +101,7 @@ public partial class LobbyScene : Node
         {
             if (config.Mode is PlayerMode.Spectator)
                 Status("waiting players start...");
-            else if (user is null || !connected)
+            else if (!connected)
                 Status("joining lobby...");
             else if (!AllReachable())
                 Status("connecting to players...");
@@ -122,46 +113,41 @@ public partial class LobbyScene : Node
 
         void UpdateStatusColor()
         {
-            if (!connected)
-                lblUserName.LabelSettings.FontColor = MemberStatusColor(MemberStatus.Connecting);
-            else if (config.Mode is PlayerMode.Spectator)
-                lblUserName.LabelSettings.FontColor = MemberStatusColor(MemberStatus.None);
-            else if (readyToStart)
+            if (readyToStart)
                 lblUserName.LabelSettings.FontColor = MemberStatusColor(MemberStatus.Ready);
             else
-                lblUserName.LabelSettings.FontColor = MemberStatusColor(MemberStatus.Reachable);
+                lblUserName.LabelSettings.FontColor = MemberStatusColor(MemberStatus.Joined);
         }
     }
 
-    async Task ToggleReady()
+    void ToggleReady()
     {
         if (readyToStart || config.Mode is PlayerMode.Spectator)
             return;
 
         if (!AllReachable()) return;
 
-        await httpClient.ToggleReady(user);
+        lobby.SetLocalPlayerReady();
 
         readyToStart = true;
         UpdateStatus();
     }
 
-    async Task RequestLobby()
+    async Task JoinLobby()
     {
-        user = null;
         try
         {
-            user = await httpClient.EnterLobby(config.LobbyName, config.Username, config.Mode);
-            await RefreshLobby();
+            // Join the Steam Lobby
+            if (config.LobbySteamId != CSteamID.Nil)
+                await lobby.EnterLobby(config.LobbySteamId);
+            else
+                await lobby.CreateLobby();
 
-            config.LobbyName = lobbyInfo.Name;
-            config.Username = user.Username;
+            connected = true;
+
             lblLobbyName.Text = config.LobbyName;
             lblUserName.Text = config.Username;
             UpdateTitle();
-
-            if (Array.Exists(lobbyInfo.Spectators, s => s.PeerId == user.PeerId))
-                config.Mode = PlayerMode.Spectator;
 
             Status();
         }
@@ -172,89 +158,16 @@ public partial class LobbyScene : Node
         catch (Exception ex)
         {
             Status($"Unable to join: {ex.Message}");
-            Log.Error(ex, "Request Lobby Failure");
+            Log.Error(ex, "Join Lobby Failure");
         }
     }
 
     bool AllReachable()
     {
-        if (lobbyInfo is null || lobbyInfo.Players.Length <= 1)
+        if (lobbyInfo.Players is null || lobbyInfo.Players.Length <= 1)
             return false;
 
-        foreach (var peer in lobbyInfo.Players)
-        {
-            if (peer.PeerId == user.PeerId)
-                continue;
-
-            if (!peer.Connected || !udpClient.IsKnown(peer.PeerId))
-                return false;
-        }
-
         return true;
-    }
-
-    bool refreshing;
-
-    async Task RefreshLobby()
-    {
-        if (user is null || refreshing) return;
-        refreshing = true;
-        try
-        {
-            lobbyInfo = await httpClient.GetLobby(user, cts.Token);
-            // Log.Info($"On lobby: {lobbyInfo.Name} at {lobbyInfo.CreatedAt}");
-
-            connected = lobbyInfo
-                .GetPeers(config.Mode)
-                .SingleOrDefault(x => x.PeerId == user.PeerId) is { Connected: true };
-
-            FillMemberList(lstPlayers, lobbyInfo.Players);
-            FillMemberList(lstSpectators, lobbyInfo.Spectators);
-
-            await udpClient.HandShake(user);
-        }
-        catch (OperationCanceledException)
-        {
-            // skip
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Refresh Lobby Failure");
-        }
-        finally
-        {
-            refreshing = false;
-            UpdateStatus();
-        }
-    }
-
-
-    bool pinging;
-
-    async Task PingUdp()
-    {
-        if (user is null || pinging || lobbyInfo is null || lobbyInfo.Ready) return;
-
-        pinging = true;
-        try
-        {
-            await Task.WhenAll(
-                udpClient.Ping(user, lobbyInfo.Players, cts.Token),
-                udpClient.Ping(user, lobbyInfo.Spectators, cts.Token)
-            );
-        }
-        catch (OperationCanceledException)
-        {
-            // skip
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Upd Ping Failure");
-        }
-        finally
-        {
-            pinging = false;
-        }
     }
 
     void FillMemberList(ItemList list, IEnumerable<Peer> peers)
@@ -270,21 +183,7 @@ public partial class LobbyScene : Node
 
         MemberStatus FindStatus(Peer player)
         {
-            if (player.PeerId == user.PeerId)
-            {
-                if (!connected)
-                    return MemberStatus.Connecting;
-
-                return readyToStart ? MemberStatus.Ready : MemberStatus.Reachable;
-            }
-
-            if (!player.Connected)
-                return MemberStatus.Connecting;
-
-            if (!udpClient.IsKnown(player.PeerId))
-                return MemberStatus.Connected;
-
-            return player.Ready ? MemberStatus.Ready : MemberStatus.Reachable;
+            return player.Ready ? MemberStatus.Ready : MemberStatus.Joined;
         }
     }
 
@@ -292,9 +191,7 @@ public partial class LobbyScene : Node
     {
         var labels = new[]
         {
-            (Status: MemberStatus.Connecting, Text: "Not connected to the server yet."),
-            (Status: MemberStatus.Connected, Text: "Valid UDP connection with server."),
-            (Status: MemberStatus.Reachable, Text: "Valid UDP connection with peers."),
+            (Status: MemberStatus.Joined, Text: "Joined to the lobby."),
             (Status: MemberStatus.Ready, Text: "Ready to start the game."),
         };
 
@@ -311,76 +208,23 @@ public partial class LobbyScene : Node
 
     void LoadBattleScene() => GetTree().ChangeSceneToFile("res://scenes/battle.tscn");
 
-    void CheckPlayersReady()
+    public void OnUserListUpdated(Peer[] players, Peer[] spectators)
     {
-        if (lobbyInfo is null or { Ready: false }) return;
-
-        cts.Cancel();
-        udpClient.Stop();
-
-        Log.Info($"STARTING {config.Username} AS '{config.Mode}' ON {config.LobbyName}");
-        config.LobbyInfo = lobbyInfo;
-
-        switch (config.Mode)
+        Callable.From(() =>
         {
-            case PlayerMode.Player:
-                ConfigureBattleScene();
-                break;
-            case PlayerMode.Spectator:
-                ConfigureSpectatorScene();
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+            lobbyInfo.Players = players;
+            lobbyInfo.Spectators = spectators;
 
-        LoadBattleScene();
-
-        return;
-
-        void ConfigureBattleScene()
-        {
-            List<NetcodePlayer> players = [];
-
-            for (var i = 0; i < lobbyInfo.Players.Length; i++)
-            {
-                var player = lobbyInfo.Players[i];
-                var playerNumber = i + 1;
-
-                players.Add(player.PeerId == user.PeerId
-                    ? NetcodePlayer.CreateLocal()
-                    : NetcodePlayer.CreateRemote(
-                        udpClient.GetFallbackEndpoint(user, player)));
-            }
-
-            if (lobbyInfo.SpectatorMapping.SingleOrDefault(m => m.Host == user.PeerId)
-                is { Watchers: { } spectatorIds })
-                players.AddRange(lobbyInfo.Spectators
-                    .Where(s => spectatorIds.Contains(s.PeerId))
-                    .Select(spectator => udpClient.GetFallbackEndpoint(user, spectator))
-                    .Select(NetcodePlayer.CreateSpectator));
-
-            config.MatchPlayers = players.AsReadOnly();
-        }
-
-        void ConfigureSpectatorScene()
-        {
-            var hostId = lobbyInfo.SpectatorMapping
-                .SingleOrDefault(x => x.Watchers.Contains(user.PeerId))
-                ?.Host;
-
-            var host = lobbyInfo.Players.Single(x => x.PeerId == hostId);
-            config.SpectateHost = udpClient.GetFallbackEndpoint(user, host);
-
-            DisplayServer.WindowSetTitle($"Space War {config.LocalPort}: spectating {host.Username}@{lobbyInfo.Name}");
-        }
+            FillMemberList(lstPlayers, players);
+            FillMemberList(lstSpectators, spectators);
+        }).CallDeferred();
     }
+
+    public void OnStartGameMsgReceived() => CallDeferred(MethodName.LoadBattleScene);
 
     public enum MemberStatus
     {
-        None,
-        Connecting,
-        Connected,
-        Reachable,
+        Joined,
         Ready,
     }
 }

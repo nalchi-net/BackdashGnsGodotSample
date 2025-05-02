@@ -1,63 +1,44 @@
-using System.Net;
 using Backdash;
+using Backdash.Gns;
 using SpaceWar.Models;
+using GnsSharp;
+using SpaceWar.Logic;
 
 public class GlobalConfig
 {
     static readonly Lazy<GlobalConfig> instance = new(() => new());
     public static GlobalConfig Instance => instance.Value;
 
+    public CSteamID UserSteamId { get; init; }
     public string Username { get; set; }
     public string LobbyName { get; set; }
-    public Uri ServerUrl { get; set; }
     public int LocalPort { get; set; }
-    public int ServerUdpPort { get; set; }
     public PlayerMode Mode { get; set; }
+    public CSteamID LobbySteamId { get; set; }
     public Lobby LobbyInfo { get; set; }
-    public IPEndPoint SpectateHost { get; set; }
+    public SteamEndPoint SpectateHost { get; set; }
     public IReadOnlyList<NetcodePlayer> MatchPlayers { get; set; }
 
     public GlobalConfig()
     {
-        ConfigFile config = new();
-        config.Load("res://settings.ini");
+        LobbyName = "spacewar";
 
-        var section = config.GetSections().Single();
+        InitLocalPort();
+        InitUsername();
 
-        LobbyName = (string)config.GetValue(section, nameof(LobbyName));
-        LobbyName = LobbyName.NormalizeText();
-
-        LoadLocalPort(config, section);
-        LoadUsername(config, section);
-        LoadServerAddress(config, section);
+        UserSteamId = ISteamUser.User.GetSteamID();
     }
 
-    void LoadLocalPort(ConfigFile config, string section)
+    void InitLocalPort()
     {
-        LocalPort = (int)config.GetValue(section, nameof(LocalPort));
-
-        if (LocalPort is 0)
-            LocalPort = Random.Shared.Next(9_000, 10_000);
+        LocalPort = SteamLobbyConstants.MsgChannel;
     }
 
-    void LoadServerAddress(ConfigFile config, string section)
+    void InitUsername()
     {
-        ServerUdpPort = (int)config.GetValue(section, nameof(ServerUdpPort));
-        if (Uri.TryCreate(
-                (string)config.GetValue(section, nameof(ServerUrl)),
-                UriKind.Absolute, out var url))
-            ServerUrl = url;
-        else
-            throw new InvalidOperationException("Invalid Server URL");
-    }
-
-    void LoadUsername(ConfigFile config, string section)
-    {
-        Username = (string)config.GetValue(section, nameof(Username));
+        Username = ISteamFriends.User.GetPersonaName();
 
         if (string.IsNullOrWhiteSpace(Username))
             Username = System.Environment.UserName;
-
-        Username = Username.NormalizeText();
     }
 }

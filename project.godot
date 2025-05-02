@@ -12,10 +12,14 @@ config_version=5
 
 config/name="SpaceWar"
 config/version="1.0.0"
-run/main_scene="res://scenes/login.tscn"
+run/main_scene="res://scenes/top_menu.tscn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 run/max_fps=60
 config/icon="res://icon.svg"
+
+[autoload]
+
+SteamClient="*res://scripts/Autoloads/SteamClient.cs"
 
 [display]
 

@@ -15,6 +15,7 @@ dest_files=["res://.godot/imported/LucidaSans.ttf-6658f76e424e4f3c9d7a9a3d886584
 Rendering=null
 antialiasing=1
 generate_mipmaps=false
+disable_embedded_bitmaps=true
 multichannel_signed_distance_field=false
 msdf_pixel_range=8
 msdf_size=48
