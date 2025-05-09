@@ -1,7 +1,8 @@
-[gd_scene load_steps=16 format=3 uid="uid://drwxkxiew1bql"]
+[gd_scene load_steps=18 format=3 uid="uid://drwxkxiew1bql"]
 
 [ext_resource type="Texture2D" uid="uid://c0ae41h1i4s1p" path="res://textures/blank.tres" id="1_ndtds"]
 [ext_resource type="Script" path="res://scripts/Scenes/LobbyScene.cs" id="1_vswju"]
+[ext_resource type="Theme" uid="uid://cybuh7e6joost" path="res://themes/buttons.tres" id="3_cu8r8"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_eqvhj"]
 font_size = 35
@@ -55,6 +56,8 @@ bg_color = Color(0.0588235, 0.0588235, 0.0588235, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ckfke"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cf1kn"]
+
 [node name="Root" type="Node2D"]
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -71,14 +74,6 @@ theme_override_constants/margin_bottom = 20
 layout_mode = 2
 theme_override_constants/separation = 10
 script = ExtResource("1_vswju")
-
-[node name="RefreshLobbyTimer" type="Timer" parent="MarginContainer/LobbyContainer"]
-wait_time = 2.0
-autostart = true
-
-[node name="UdpPingTimer" type="Timer" parent="MarginContainer/LobbyContainer"]
-wait_time = 0.4
-autostart = true
 
 [node name="HeaderContainer" type="HSplitContainer" parent="MarginContainer/LobbyContainer"]
 layout_mode = 2
@@ -174,14 +169,19 @@ item_0/text = "Spectator 1"
 item_0/icon = ExtResource("1_ndtds")
 item_0/selectable = false
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/LobbyContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/LobbyContainer"]
+layout_mode = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/LobbyContainer/HBoxContainer"]
 clip_contents = true
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="lstStatusLabels" type="ItemList" parent="MarginContainer/LobbyContainer/PanelContainer"]
+[node name="lstStatusLabels" type="ItemList" parent="MarginContainer/LobbyContainer/HBoxContainer/PanelContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
 theme_override_colors/font_selected_color = Color(0.647059, 0.647059, 0.647059, 1)
 theme_override_colors/font_hovered_color = Color(0.643137, 0.643137, 0.643137, 1)
@@ -205,5 +205,16 @@ item_0/icon = ExtResource("1_ndtds")
 item_1/text = "Label 2"
 item_1/icon = ExtResource("1_ndtds")
 
-[connection signal="timeout" from="MarginContainer/LobbyContainer/RefreshLobbyTimer" to="MarginContainer/LobbyContainer" method="_OnRefreshLobby"]
-[connection signal="timeout" from="MarginContainer/LobbyContainer/UdpPingTimer" to="MarginContainer/LobbyContainer" method="_OnPingTimer"]
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/LobbyContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_cf1kn")
+
+[node name="btnInviteSteamFriend" type="Button" parent="MarginContainer/LobbyContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("3_cu8r8")
+theme_override_font_sizes/font_size = 27
+disabled = true
+text = "Invite Steam friend"
+
+[connection signal="pressed" from="MarginContainer/LobbyContainer/HBoxContainer/btnInviteSteamFriend" to="MarginContainer/LobbyContainer" method="OnInviteSteamFriendPressed"]

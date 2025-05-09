@@ -6,7 +6,7 @@ It shows a basic example of an online lobby using [Steam P2P Matchmaking & Lobbi
 
 ## Video
 
-https://github.com/user-attachments/assets/a43b664b-64b6-44f4-be31-6699365dae39
+https://github.com/user-attachments/assets/289acb92-b557-4a5b-a037-c6771467aa73
 
 # How does it work?
 

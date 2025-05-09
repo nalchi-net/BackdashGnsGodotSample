@@ -14,7 +14,7 @@ public sealed class SteamLobbyService(ISteamLobbyServiceHandlers handlers) : IDi
     readonly ISteamLobbyServiceHandlers handlers = handlers;
 
     CSteamID lobbyId = CSteamID.Nil;
-    CSteamID LobbyId
+    public CSteamID LobbyId
     {
         get => Volatile.Read(ref lobbyId.Id);
         set => Volatile.Write(ref lobbyId.Id, value.Id);
@@ -45,6 +45,7 @@ public sealed class SteamLobbyService(ISteamLobbyServiceHandlers handlers) : IDi
                 throw new Exception($"ISteamMatchmaking.CreateLobby failed with {lobbyCreated.Value.Result}");
 
             LobbyId = lobbyCreated.Value.SteamIDLobby;
+            GlobalConfig.Instance.LobbySteamId = lobbyCreated.Value.SteamIDLobby;
 
             InitializeLobbyData(LobbyId);
             InitializeLobbyMemberData(LobbyId);
@@ -76,7 +77,9 @@ public sealed class SteamLobbyService(ISteamLobbyServiceHandlers handlers) : IDi
                 throw new Exception($"ISteamMatchmaking.JoinLobby failed with {lobbyEnter.Value.ChatRoomEnterResponse}");
 
             LobbyId = lobbyEnter.Value.SteamIDLobby;
+            GlobalConfig.Instance.LobbySteamId = lobbyEnter.Value.SteamIDLobby;
 
+            FetchLobbyData(LobbyId);
             InitializeLobbyMemberData(LobbyId);
             users.InitializeWithExistingUsers(LobbyId);
 
@@ -374,6 +377,14 @@ public sealed class SteamLobbyService(ISteamLobbyServiceHandlers handlers) : IDi
 
         matchmaking.SetLobbyData(lobbyId, SteamLobbyConstants.GameTitleKey, SteamLobbyConstants.GameTitleValue);
         matchmaking.SetLobbyData(lobbyId, SteamLobbyConstants.LobbyNameKey, config.LobbyName);
+    }
+
+    static void FetchLobbyData(CSteamID lobbyId)
+    {
+        var matchmaking = ISteamMatchmaking.User;
+        var config = GlobalConfig.Instance;
+
+        config.LobbyName = matchmaking.GetLobbyData(lobbyId, SteamLobbyConstants.LobbyNameKey);
     }
 
     static void InitializeLobbyMemberData(CSteamID lobbyId)

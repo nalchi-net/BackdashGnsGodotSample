@@ -11,6 +11,7 @@ public partial class LobbyScene : Node, ISteamLobbyServiceHandlers
     Label lblLobbyName;
     ItemList lstPlayers;
     ItemList lstSpectators;
+    Button btnInviteSteamFriend;
 
     SteamLobbyService lobby;
     Lobby lobbyInfo;
@@ -72,6 +73,7 @@ public partial class LobbyScene : Node, ISteamLobbyServiceHandlers
         lstPlayers = GetNode<ItemList>("%lstPlayers");
         lstSpectators = GetNode<ItemList>("%lstSpectators");
         lblStatus = GetNode<Label>("%lblStatus");
+        btnInviteSteamFriend = GetNode<Button>("%btnInviteSteamFriend");
     }
 
     void ResetControls()
@@ -147,6 +149,7 @@ public partial class LobbyScene : Node, ISteamLobbyServiceHandlers
 
             lblLobbyName.Text = config.LobbyName;
             lblUserName.Text = config.Username;
+            btnInviteSteamFriend.Disabled = false;
             UpdateTitle();
 
             Status();
@@ -221,6 +224,13 @@ public partial class LobbyScene : Node, ISteamLobbyServiceHandlers
     }
 
     public void OnStartGameMsgReceived() => CallDeferred(MethodName.LoadBattleScene);
+
+    void OnInviteSteamFriendPressed()
+    {
+        var friends = ISteamFriends.User;
+
+        friends.ActivateGameOverlayInviteDialog(lobby.LobbyId);
+    }
 
     public enum MemberStatus
     {

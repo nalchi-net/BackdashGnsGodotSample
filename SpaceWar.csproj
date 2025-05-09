@@ -9,6 +9,7 @@
     <BackdashGnsVersion>0.1.0-alpha.3</BackdashGnsVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="Backdash.Utils" Version="$(BackdashVersion)" />
     <!-- Copy `steam_appid.txt` for ease of testing, should NOT do this in production! -->
     <Content Include="steam_appid.txt">
